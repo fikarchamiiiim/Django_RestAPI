@@ -1,5 +1,7 @@
+from django.db.models.query import QuerySet
 from django.http.response import Http404
 from django.shortcuts import render
+import django_filters.rest_framework
 from rest_framework import serializers, status, generics, mixins
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -51,6 +53,20 @@ class VehicleTypeAPI(mixins.ListModelMixin,
 
     queryset = VehicleType.objects.order_by("-id")
     serializer_class = VehicleTypeSerializer
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+
+    def get_queryset(self):
+        brand = self.request.query_params.get('brand')
+        name = self.request.query_params.get('name')
+        if brand is not None and name is None:
+            data = VehicleType.objects.filter(brand_id__name=brand)
+        elif brand is None and name is not None:
+            data = VehicleType.objects.filter(name=name)
+        elif brand is not None and name is not None:
+            data = data = VehicleType.objects.filter(brand_id__name=brand, name=name)
+        else:
+            data = self.queryset
+        return data
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
@@ -67,6 +83,19 @@ class VehicleModelAPI(mixins.ListModelMixin,
 
     queryset = VehicleModel.objects.order_by("-id")
     serializer_class = VehicleModelSerializer
+
+    def get_queryset(self):
+        type = self.request.query_params.get('type')
+        name = self.request.query_params.get('name')
+        if type is not None and name is None:
+            data = VehicleType.objects.filter(type_id__name=type)
+        elif type is None and name is not None:
+            data = VehicleType.objects.filter(name=name)
+        elif type is not None and name is not None:
+            data = data = VehicleType.objects.filter(type_id__name=type, name=name)
+        else:
+            data = self.queryset
+        return data
 
     def get(self, request, *args, **kwargs):
         return self.list(request, *args, **kwargs)
@@ -106,6 +135,23 @@ class PriceListAPI(mixins.ListModelMixin,
     def post(self, request, *args, **kwargs):
         return self.create(request, *args, **kwargs)
 
+    def get_queryset(self):
+        code = self.request.query_params.get('code')
+        price = self.request.query_params.get('price')
+        year = self.request.query_params.get('year')
+        model = self.request.query_params.get('model')
+
+        if code is not None:
+            data = PriceList.objects.filter(code=code)
+        elif price is not None:
+            data = PriceList.objects.filter(price=price)
+        elif year is not None:
+            data = PriceList.objects.filter(year=year)
+        elif model is not None:
+            data = PriceList.objects.filter(model__name=model)
+        else:
+            data = self.queryset
+        return data
 
 # ======== DETAIL ==================
 class VehicleBrandDetail(APIView):
